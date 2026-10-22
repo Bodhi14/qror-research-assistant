@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.py[cod]
+data/index.npz
+data/chunks.json
+.DS_Store
