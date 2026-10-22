@@ -3,4 +3,7 @@ __pycache__/
 *.py[cod]
 data/index.npz
 data/chunks.json
+data/gmail_imports.sqlite3
+credentials.json
+token.json
 .DS_Store
