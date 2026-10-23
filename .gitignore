@@ -7,3 +7,4 @@ data/gmail_imports.sqlite3
 credentials.json
 token.json
 .DS_Store
+*.pptx
