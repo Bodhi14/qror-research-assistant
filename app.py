@@ -207,7 +207,7 @@ with st.sidebar:
         st.caption(f"Answer model: Ollama / {OLLAMA_MODEL}")
     else:
         st.caption(f"Answer model: {INFERENCE_MODEL or 'not configured'}")
-    st.caption(f"Inference provider mode: {LLM_PROVIDER}")
+    st.caption(f"Inference provider model: {LLM_PROVIDER}")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
