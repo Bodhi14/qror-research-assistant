@@ -1,10 +1,20 @@
-.venv/
+# Python
+venv/
 __pycache__/
 *.py[cod]
+
+# Local data and generated indexes
 data/index.npz
 data/chunks.json
-data/gmail_imports.sqlite3
+
+# OAuth and secrets
 credentials.json
 token.json
+.env.example
+.streamlit/secrets.toml
+
+# OS
 .DS_Store
+
+#demo ppt
 *.pptx
