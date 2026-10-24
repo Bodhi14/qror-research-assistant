@@ -6,6 +6,7 @@ A Streamlit retrieval-augmented generation (RAG) assistant for QROR course PDFs.
 
 - Upload PDF files in the sidebar or place permitted PDFs in `data/documents/`.
 - Build a local dense-vector index using `sentence-transformers/all-MiniLM-L6-v2`.
+- Fall back to OCR for image-only PDF pages, including many scanned notes.
 - Use Ollama locally, or configure an OpenAI-compatible inference endpoint for a cloud deployment.
 - Inspect the retrieved passages and page numbers behind answers.
 
@@ -27,7 +28,35 @@ pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-The default configuration is `LLM_PROVIDER=ollama`, `OLLAMA_BASE_URL=http://localhost:11434`, and `OLLAMA_MODEL=gemma4:e2b`.
+The default configuration is `LLM_PROVIDER=ollama`, `OLLAMA_BASE_URL=http://localhost:11434`, and `OLLAMA_MODEL=qwen2.5:3b`.
+
+### Environment configuration
+
+For local development, copy `.env.example` to `.env` and edit the values:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+The app loads `.env` at startup with `python-dotenv`. With the default Ollama
+configuration, only these settings are needed:
+
+```dotenv
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+LLM_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=qwen2.5:3b
+```
+
+`INFERENCE_BASE_URL`, `INFERENCE_API_KEY`, and `INFERENCE_MODEL` are only needed
+when `LLM_PROVIDER=openai_compatible`. They tell the app where to send the
+grounded question and retrieved PDF passages, which API key authenticates that
+request, and which hosted model should generate the answer. They are not needed
+for local Ollama.
+
+On Streamlit Community Cloud, there is no local `.env` file. Add the same
+values under **App settings -> Secrets** instead; Streamlit exposes those
+secrets to the app as `st.secrets`.
 
 ## Cloud deployment with an OpenAI-compatible inference API
 
@@ -50,11 +79,26 @@ Configure the service's HTTP port to match. Add the inference variables as encry
 
 ## How it works
 
-1. Extracts text from PDF pages.
-2. Splits page text into overlapping chunks and stores file/page metadata.
-3. Embeds chunks with `all-MiniLM-L6-v2`.
-4. Retrieves the top four chunks by cosine similarity.
-5. Sends the question and retrieved passages to the selected LLM backend and asks it to cite source labels such as `[S1]`.
+1. Extracts text from PDF pages with `pypdf`.
+2. If a page has no extractable text, renders it and runs Tesseract OCR.
+3. Splits page text into overlapping chunks and stores file/page metadata.
+4. Embeds chunks with `all-MiniLM-L6-v2`.
+5. Retrieves the top four chunks by cosine similarity.
+6. Sends the question and retrieved passages to the selected LLM backend and asks it to cite source labels such as `[S1]`.
+
+### Handwritten and scanned notes
+
+`pypdf` can read text embedded in a PDF, but it cannot read handwriting or
+image-only scans. The app now automatically tries OCR for pages where `pypdf`
+returns no text. Streamlit Cloud installs Tesseract from `packages.txt`; local
+Windows development requires installing the Tesseract application separately
+and adding it to `PATH`.
+
+OCR is a best-effort fallback: Tesseract works substantially better on clear
+printed text than on handwriting, equations, faint pencil, skewed pages, or
+complex layouts. After uploading notes, click **Build / refresh index** again so
+the OCR text is embedded. If the writing is still not recognized, use a
+higher-resolution scan or a handwriting-capable vision/OCR service.
 
 ## End-to-end orchestration
 

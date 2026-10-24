@@ -10,7 +10,7 @@ data/chunks.json
 # OAuth and secrets
 credentials.json
 token.json
-.env.example
+.env
 .streamlit/secrets.toml
 
 # OS

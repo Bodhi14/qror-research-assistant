@@ -1,24 +1,41 @@
-import json
+﻿import json
 import os
+from io import BytesIO
 from pathlib import Path
 
 import numpy as np
+import pymupdf
+from PIL import Image
 import requests
 import streamlit as st
+from dotenv import load_dotenv
 from pypdf import PdfReader
+import pytesseract
 from sentence_transformers import SentenceTransformer
 
 APP_DIR = Path(__file__).resolve().parent
+load_dotenv(APP_DIR / ".env")
+
+
+def get_setting(name: str, default: str = ""):
+    if name in os.environ:
+        return os.environ[name]
+    return str(st.secrets.get(name, default))
+
+
 DOCS_DIR = APP_DIR / "data" / "documents"
 INDEX_PATH = APP_DIR / "data" / "index.npz"
 CHUNKS_PATH = APP_DIR / "data" / "chunks.json"
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama").strip().lower()
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
-INFERENCE_BASE_URL = os.getenv("INFERENCE_BASE_URL", "").rstrip("/")
-INFERENCE_API_KEY = os.getenv("INFERENCE_API_KEY", "")
-INFERENCE_MODEL = os.getenv("INFERENCE_MODEL", "")
+EMBEDDING_MODEL = get_setting("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2").strip()
+LLM_PROVIDER = get_setting("LLM_PROVIDER", "ollama").strip().lower()
+OLLAMA_BASE_URL = get_setting("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
+OLLAMA_MODEL = get_setting("OLLAMA_MODEL", "qwen2.5:3b")
+INFERENCE_BASE_URL = get_setting("INFERENCE_BASE_URL").rstrip("/")
+INFERENCE_API_KEY = get_setting("INFERENCE_API_KEY")
+INFERENCE_MODEL = get_setting("INFERENCE_MODEL")
+OCR_ENABLED = get_setting("OCR_ENABLED", "true").strip().lower() == "true"
+OCR_DPI = int(get_setting("OCR_DPI", "200"))
+MIN_EXTRACTED_TEXT = 30
 CHUNK_SIZE = 900
 CHUNK_OVERLAP = 150
 TOP_K = 4
@@ -52,17 +69,43 @@ def split_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
     return chunks
 
 
+def extract_page_text(pdf_path: Path, page_number: int, page, ocr_warnings: set[str]):
+    text = page.extract_text() or ""
+    if len(text.strip()) >= MIN_EXTRACTED_TEXT or not OCR_ENABLED:
+        return text
+
+    try:
+        with pymupdf.open(pdf_path) as document:
+            rendered_page = document.load_page(page_number - 1)
+            matrix = pymupdf.Matrix(OCR_DPI / 72, OCR_DPI / 72)
+            image = rendered_page.get_pixmap(matrix=matrix, alpha=False)
+            page_image = Image.open(BytesIO(image.tobytes("png")))
+        ocr_text = pytesseract.image_to_string(page_image)
+        return ocr_text if len(ocr_text.strip()) > len(text.strip()) else text
+    except pytesseract.TesseractNotFoundError:
+        if "tesseract" not in ocr_warnings:
+            st.warning("OCR is enabled, but Tesseract is not installed. Install it or disable OCR_ENABLED.")
+            ocr_warnings.add("tesseract")
+    except Exception as exc:
+        warning_key = f"{pdf_path.name}:{page_number}"
+        if warning_key not in ocr_warnings:
+            st.warning(f"Could not OCR {pdf_path.name}, page {page_number}: {exc}")
+            ocr_warnings.add(warning_key)
+    return ""
+
+
 def build_index():
     pdf_paths = sorted(DOCS_DIR.rglob("*.pdf"))
     if not pdf_paths:
         raise ValueError("No PDFs found. Upload a PDF in the sidebar or add one under data/documents/.")
 
     records = []
+    ocr_warnings = set()
     for pdf_path in pdf_paths:
         try:
             reader = PdfReader(str(pdf_path))
             for page_number, page in enumerate(reader.pages, start=1):
-                page_text = page.extract_text() or ""
+                page_text = extract_page_text(pdf_path, page_number, page, ocr_warnings)
                 for chunk_number, chunk in enumerate(split_text(page_text), start=1):
                     records.append({
                         "text": chunk,
@@ -180,7 +223,6 @@ def render_sources(passages: list[dict]):
                 f"Similarity score: {source['score']:.3f}"
             )
             st.write(source["text"])
-
 
 with st.sidebar:
     st.header("Course materials")
