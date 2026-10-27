@@ -45,7 +45,7 @@ configuration, only these settings are needed:
 EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 LLM_PROVIDER=ollama
 OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=qwen2.5:3b
+OLLAMA_MODEL=gemma4:e4b
 ```
 
 `INFERENCE_BASE_URL`, `INFERENCE_API_KEY`, and `INFERENCE_MODEL` are only needed
