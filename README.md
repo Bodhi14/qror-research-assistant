@@ -15,7 +15,7 @@ A Streamlit retrieval-augmented generation (RAG) assistant for QROR course PDFs.
 Use Python 3.11 if possible. Install and start Ollama, then pull the default model:
 
 ```powershell
-ollama pull qwen2.5:3b
+ollama pull gemma4:e2b
 ```
 
 Create a virtual environment and install dependencies:
