@@ -4,8 +4,7 @@ __pycache__/
 *.py[cod]
 
 # Local data and generated indexes
-data/index.npz
-data/chunks.json
+data/
 
 # OAuth and secrets
 credentials.json

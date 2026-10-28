@@ -15,7 +15,7 @@ A Streamlit retrieval-augmented generation (RAG) assistant for QROR course PDFs.
 Use Python 3.11 if possible. Install and start Ollama, then pull the default model:
 
 ```powershell
-ollama pull gemma4:e2b
+ollama pull qwen2.5:3b
 ```
 
 Create a virtual environment and install dependencies:
@@ -60,12 +60,32 @@ secrets to the app as `st.secrets`.
 
 ## Cloud deployment with an OpenAI-compatible inference API
 
-Set these environment variables in the hosting provider's secret/environment settings:
+This section is required only for Streamlit Cloud or another host where Ollama
+is not running. Ollama at `http://localhost:11434` refers to the hosting server,
+not your personal computer, so Streamlit Cloud needs a hosted model API.
+
+### Where to configure it in Streamlit Cloud
+
+1. Open your app in Streamlit Cloud.
+2. Open **Manage app** or the app menu.
+3. Select **Settings -> Secrets**.
+4. Paste the following TOML configuration, replacing all placeholder values:
+
+```toml
+LLM_PROVIDER = "openai_compatible"
+INFERENCE_BASE_URL = "https://YOUR_PROVIDER_BASE_URL/v1"
+INFERENCE_API_KEY = "your-provider-api-key"
+INFERENCE_MODEL = "exact-model-id"
+```
+
+5. Save the secrets and reboot or rerun the app.
+
+These settings are read by `app.py` through `st.secrets`:
 
 - `LLM_PROVIDER=openai_compatible`
-- `INFERENCE_BASE_URL`: provider's OpenAI-compatible base URL, usually ending in `/v1` (or the full `/chat/completions` endpoint)
-- `INFERENCE_API_KEY`: secret API key
-- `INFERENCE_MODEL`: exact model identifier supported by the provider
+- `INFERENCE_BASE_URL`: the provider's OpenAI-compatible base URL, usually ending in `/v1`; the app adds `/chat/completions`
+- `INFERENCE_API_KEY`: the provider's secret API key, sent as a Bearer token
+- `INFERENCE_MODEL`: the exact model identifier supported by the provider
 
 Do not commit API keys, OAuth files, or `.env` files. Check the provider's terms, model license, pricing, and data retention before sending course content to it.
 
