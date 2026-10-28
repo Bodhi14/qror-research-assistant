@@ -289,6 +289,12 @@ if question:
             else:
                 st.error("Could not connect to the inference provider. Check its URL and network availability.")
         except requests.HTTPError as exc:
-            st.error(f"The inference provider returned an HTTP error: {exc}")
+            provider_detail = ""
+            if exc.response is not None:
+                provider_detail = exc.response.text.strip()
+            message = f"The inference provider returned an HTTP error: {exc}"
+            if provider_detail:
+                message += f" — {provider_detail[:500]}"
+            st.error(message)
         except Exception as exc:
             st.error(f"Something went wrong: {exc}")
