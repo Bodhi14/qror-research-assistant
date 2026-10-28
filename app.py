@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from pypdf import PdfReader
 import pytesseract
 from sentence_transformers import SentenceTransformer
+from streamlit.errors import StreamlitSecretNotFoundError
 
 APP_DIR = Path(__file__).resolve().parent
 load_dotenv(APP_DIR / ".env")
@@ -20,7 +21,10 @@ load_dotenv(APP_DIR / ".env")
 def get_setting(name: str, default: str = ""):
     if name in os.environ:
         return os.environ[name]
-    return str(st.secrets.get(name, default))
+    try:
+        return str(st.secrets.get(name, default))
+    except StreamlitSecretNotFoundError:
+        return default
 
 
 DOCS_DIR = APP_DIR / "data" / "documents"
