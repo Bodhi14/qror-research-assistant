@@ -12,5 +12,9 @@ token.json
 .env
 .streamlit/secrets.toml
 
+# Local agent configuration
+.agents/
+.claude/
+
 # OS
 .DS_Store
